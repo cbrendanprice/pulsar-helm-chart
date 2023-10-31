@@ -32,6 +32,19 @@ spec:
   ttlSecondsAfterFinished: {{ .Values.job.ttl.secondsAfterFinished | default 600 }}
   {{- end }}
   template:
+    metadata:
+      {{- if .Values.pulsar_manager.init.annotations }}
+      annotations:
+      {{- with .Values.pulsar_manager.init.annotations }}
+      {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- end }}
+      labels:
+        {{- include "pulsar.template.labels" . | nindent 8 }}
+        component: {{ .Values.pulsar_manager.component }}-init
+      {{- with .Values.pulsar_manager.init.labels }}
+      {{ toYaml . | indent 8 }}
+      {{- end }}
     spec:
       nodeSelector:
       {{- if .Values.pulsar_metadata.nodeSelector }}
@@ -151,12 +164,12 @@ spec:
             - name: USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_USERNAME
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_PASSWORD
 {{- end }}
 {{- end }}
