@@ -19,6 +19,7 @@
 
 {{- if or .Release.IsInstall .Values.initialize }}
 {{- if .Values.components.pulsar_manager }}
+{{- $preValidateUsingInitContainers := (or (not .Values.pulsar_manager.init.enableIstioCompatability) (eq .Values.pulsar_manager.init.enableIstioCompatability nil)) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -32,7 +33,24 @@ spec:
   ttlSecondsAfterFinished: {{ .Values.job.ttl.secondsAfterFinished | default 600 }}
   {{- end }}
   template:
+    metadata:
+      {{- if .Values.pulsar_manager.init.annotations }}
+      annotations:
+      {{- with .Values.pulsar_manager.init.annotations }}
+      {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- end }}
+      labels:
+        {{- include "pulsar.template.labels" . | nindent 8 }}
+        component: {{ .Values.pulsar_manager.component }}-init
+      {{- with .Values.pulsar_manager.init.labels }}
+      {{ toYaml . | indent 8 }}
+      {{- end }}
     spec:
+      {{- if .Values.pulsar_manager.init.securityContext }}
+      securityContext:
+      {{ toYaml .Values.pulsar_manager.init.securityContext | indent 8 }}
+      {{- end }}
       nodeSelector:
       {{- if .Values.pulsar_metadata.nodeSelector }}
       {{ toYaml .Values.pulsar_metadata.nodeSelector | indent 8 }}
@@ -42,6 +60,7 @@ spec:
       {{ toYaml .Values.pulsar_metadata.tolerations | indent 8 }}
       {{- end }}
       restartPolicy: OnFailure
+      {{- if $preValidateUsingInitContainers }}
       initContainers:
         - name: wait-pulsar-manager-ready
           image: "{{ template "pulsar.imageFullName" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
@@ -70,6 +89,7 @@ spec:
                 sleep 10;
                 brokerServiceNumber="$(nslookup -timeout=10 {{ template "pulsar.fullname" . }}-{{ .Values.broker.component }} | grep Name | wc -l)";
               done;
+      {{- end }}
       containers:
         - name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-init"
           image: "{{ template "pulsar.imageFullName" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
@@ -81,6 +101,21 @@ spec:
           args:
             - |
               ADMIN_URL={{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-admin:{{ .Values.pulsar_manager.adminService.port }}
+
+              {{- if not $preValidateUsingInitContainers }}
+              until $(curl -sS --fail -X GET http://${ADMIN_URL} > /dev/null 2>&1); do
+                echo "pulsar manager admin isn't initialized yet ... check in 3 seconds ..."
+                sleep 3
+              done
+
+              brokerServiceNumber="$(nslookup -timeout=10 {{ template "pulsar.fullname" . }}-{{ .Values.broker.component }} | grep Name | wc -l)"
+              until [ ${brokerServiceNumber} -ge 1 ]; do
+                echo "pulsar cluster {{ template "pulsar.cluster.name" . }} isn't initialized yet ... check in 10 seconds ..."
+                sleep 10
+                brokerServiceNumber="$(nslookup -timeout=10 {{ template "pulsar.fullname" . }}-{{ .Values.broker.component }} | grep Name | wc -l)"
+              done
+              {{- end }}
+
               CSRF_TOKEN=$(curl http://${ADMIN_URL}/pulsar-manager/csrf-token)
               UI_URL={{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}:{{ .Values.pulsar_manager.service.port }}
 
@@ -140,9 +175,15 @@ spec:
                 -d '{ "name": "{{ template "pulsar.fullname" . }}", "broker": "'$BROKER_URL'", "bookie": "'$BOOKIE_URL'"}')
               echo "$ENVIRONMENT_REPLY"
 
+              successful=1
               if [ -n "$(echo "$ENVIRONMENT_REPLY" | grep -e 'success' -e 'exist')" ]; then
                 echo "Successfully created / found existing environment"
+
+                {{- if .Values.pulsar_manager.init.enableIstioCompatability }}
+                timeout 30 sh -c "until curl -vvv -fsI -X POST http://localhost:15020/quitquitquit 2>&1; do sleep 5; done;"
+                {{- else }}
                 exit 0
+                {{- end}}
               else
                 echo "Error creating environment"
                 exit 1
@@ -151,12 +192,12 @@ spec:
             - name: USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_USERNAME
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_PASSWORD
 {{- end }}
 {{- end }}
