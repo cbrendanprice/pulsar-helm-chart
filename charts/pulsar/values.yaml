@@ -941,8 +941,13 @@ proxy:
     usePolicy: true
     maxUnavailable: 1
 
-  securityContext:
-    runAsUser:
+  ## supports the following properties:
+  ## - `allowPrivilegeEscalation`
+  ## - `runAsUser`
+  containerSecurityContext: {}
+
+  ## full spec supported
+  podSecurityContext: {}
 
 ## Pulsar Extra: Dashboard
 ## templates/dashboard-deployment.yaml
