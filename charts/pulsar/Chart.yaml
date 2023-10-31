@@ -25,12 +25,12 @@ version: 3.7.0
 kubeVersion: ">=1.23.0-0"
 home: https://pulsar.apache.org
 sources:
-  - https://github.com/apache/pulsar
-  - https://github.com/apache/pulsar-helm-chart
+- https://github.com/apache/pulsar
+- https://github.com/apache/pulsar-helm-chart
 icon: https://pulsar.apache.org/img/pulsar.svg
 maintainers:
-  - name: The Apache Pulsar Team
-    email: dev@pulsar.apache.org
+- name: The Apache Pulsar Team
+  email: dev@pulsar.apache.org
 dependencies:
   - name: kube-prometheus-stack
     version: 65.x.x

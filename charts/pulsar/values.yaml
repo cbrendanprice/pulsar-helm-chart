@@ -328,8 +328,8 @@ zookeeper:
     interval: 60s
     scrapeTimeout: 60s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -584,8 +584,8 @@ bookkeeper:
     interval: 60s
     scrapeTimeout: 60s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -795,8 +795,8 @@ autorecovery:
     interval: 60s
     scrapeTimeout: 60s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -910,8 +910,8 @@ broker:
     interval: 60s
     scrapeTimeout: 60s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -1157,8 +1157,8 @@ proxy:
     interval: 60s
     scrapeTimeout: 60s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   # nodeSelector:
@@ -1170,18 +1170,21 @@ proxy:
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     readiness:
       enabled: true
       failureThreshold: 10
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     startup:
       enabled: false
       failureThreshold: 30
       initialDelaySeconds: 60
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
   affinity:
     anti_affinity: true
     anti_affinity_topology_key: kubernetes.io/hostname
@@ -1303,6 +1306,14 @@ proxy:
   pdb:
     usePolicy: true
     maxUnavailable: 1
+
+  ## supports the following properties:
+  ## - `allowPrivilegeEscalation`
+  ## - `runAsUser`
+  containerSecurityContext: {}
+
+  ## full spec supported
+  podSecurityContext: {}
 
 ## Pulsar ToolSet
 ## templates/toolset-statefulset.yaml
@@ -1456,8 +1467,6 @@ pulsar_manager:
   topologySpreadConstraints: []
   annotations: {}
   tolerations: []
-  extraVolumes: []
-  extraVolumeMounts: []
   gracePeriod: 30
   resources:
     requests:
@@ -1472,6 +1481,11 @@ pulsar_manager:
     DRIVER_CLASS_NAME: "org.postgresql.Driver"
     # enables the "message peeking" feature
     PULSAR_PEEK_MESSAGE: "true"
+  extraEnvVarsSecret:
+  # evaluated as a template
+  extraVolumeMounts: []
+  # evaluated as a template
+  extraVolumes: []
   volumes:
     # use a persistent volume or emptyDir
     persistence: true
@@ -1524,11 +1538,23 @@ pulsar_manager:
     hostname: ""
     path: "/"
 
+  init:
+    annotations: {}
+    enableIstioCompatability: false
+    labels: {}
+    securityContext: {}
+
   ## On first install, the helm chart tries to reuse an existing secret with matching name by default
   ## if this should fail it uses the given username and password to create a new secret
   ## if either are missing the default value of "pulsar" is used for the username or a random password is generated
   ## And decode any key by using:
   ## kubectl get secret -l component=pulsar-manager -o=jsonpath="{.items[0].data.UI_PASSWORD}" | base64 --decode
+  existingSecretName:
+  existingSecretDatabase:
+    name: ""
+    usernameKey: ""
+    passwordKey: ""
+
   admin:
     ## Setting a value at existingSecret disables automatic creation of the secret for pulsar_manager admin credentials and instead uses an existing secret to initialize pulsar-manager
     ## The existing secret should have the following keys:
@@ -1547,6 +1573,8 @@ pulsar_manager:
 # pulsar-helm-chart/charts/pulsar/templates/bookkeeper-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-manager-cluster-initialize.yaml
 job:
+  annotations: {}
+  labels: {}
   ttl:
     enabled: false
     secondsAfterFinished: 3600
