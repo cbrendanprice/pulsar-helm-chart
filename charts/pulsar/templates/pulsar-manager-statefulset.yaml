@@ -77,9 +77,9 @@ spec:
           volumeMounts:
           - name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-{{ .Values.pulsar_manager.volumes.data.name }}"
             mountPath: /data
-          {{- if .Values.pulsar_manager.extraVolumeMounts }}
-{{ toYaml .Values.pulsar_manager.extraVolumeMounts | indent 10 }}
-          {{- end }}
+        {{- if .Values.pulsar_manager.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.pulsar_manager.extraVolumeMounts "context" $) | nindent 10 }}
+        {{- end }}
         {{- if .Values.auth.authentication.enabled }}
         {{- if eq .Values.auth.authentication.provider "jwt" }}
           - name: pulsar-manager-keys
@@ -89,26 +89,25 @@ spec:
           envFrom:
           - configMapRef:
               name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}"
+          {{- if .Values.pulsar_manager.extraEnvVarsSecret }}
+          - secretRef:
+              name: {{ include "common.tplvalues.render" (dict "value" .Values.pulsar_manager.extraEnvVarsSecret "context" $) }}
+          {{- end }}
           env:
-          - name: USERNAME
-            valueFrom:
-              secretKeyRef:
-                {{- if .Values.pulsar_manager.admin.existingSecret }}
-                name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
-                {{- else }}
-                name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
-                {{- end }}
-                key: DB_USERNAME
+          - name: PULSAR_CLUSTER
+            value: {{ template "pulsar.fullname" . }}
+          {{- if and .Values.pulsar_manager.existingSecretDatabase .Values.pulsar_manager.existingSecretDatabase.name }}
           - name: PASSWORD
             valueFrom:
               secretKeyRef:
-                {{- if .Values.pulsar_manager.admin.existingSecret }}
-                name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
-                {{- else }}
-                name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
-                {{- end }}
-                key: DB_PASSWORD
-        {{- if .Values.auth.authentication.enabled }}
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.passwordKey }}{{ .Values.pulsar_manager.existingSecretDatabase.passwordKey | trim | quote }}{{else}}DB_PASSWORD{{end}}
+          - name: USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.usernameKey }}{{ .Values.pulsar_manager.existingSecretDatabase.usernameKey | trim | quote }}{{else}}DB_USERNAME{{end}}
+          {{- if .Values.auth.authentication.enabled }}
         {{- if eq .Values.auth.authentication.provider "jwt" }}
         {{- if .Values.auth.superUsers.manager }}
           - name: JWT_TOKEN
@@ -118,12 +117,12 @@ spec:
                 name: "{{ .Release.Name }}-token-{{ .Values.auth.superUsers.manager }}"
         {{- end }}
         {{- end }}
-        {{- end }}          
+        {{- end }}
         {{- include "pulsar.imagePullSecrets" . | nindent 6}}
       volumes:
-        {{- if .Values.pulsar_manager.extraVolumes }}
-{{ toYaml .Values.pulsar_manager.extraVolumes | indent 8 }}
-        {{- end }}
+      {{- if .Values.pulsar_manager.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.pulsar_manager.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
       {{- if .Values.auth.authentication.enabled }}
       {{- if eq .Values.auth.authentication.provider "jwt" }}
         - name: pulsar-manager-keys
