@@ -1105,6 +1105,8 @@ pulsar_manager:
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/bookkeeper-cluster-initialize.yaml
 job:
+  annotations: {}
+  labels: {}
   ttl:
     enabled: false
     secondsAfterFinished: 3600
