@@ -106,6 +106,10 @@ spec:
     {{- if and .Values.rbac.enabled .Values.rbac.psp }}
       serviceAccountName: "{{ template "pulsar.fullname" . }}-{{ .Values.proxy.component }}"
     {{- end}}
+    {{- if .Values.proxy.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.proxy.podSecurityContext | indent 8 }}
+    {{- end}}
       initContainers:
       # This init container will wait for zookeeper to be ready before
       # deploying the bookies
@@ -147,7 +151,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /status.html
-            port: {{ .Values.proxy.ports.http }}
+            port: {{ if .Values.proxy.probe.liveness.port }}{{ .Values.proxy.probe.liveness.port }}{{ else }}{{ .Values.proxy.ports.http }}{{ end }}
           initialDelaySeconds: {{ .Values.proxy.probe.liveness.initialDelaySeconds }}
           periodSeconds: {{ .Values.proxy.probe.liveness.periodSeconds }}
           timeoutSeconds: {{ .Values.proxy.probe.liveness.timeoutSeconds }}
@@ -157,7 +161,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /status.html
-            port: {{ .Values.proxy.ports.http }}
+            port: {{ if .Values.proxy.probe.readiness.port }}{{ .Values.proxy.probe.readiness.port }}{{ else }}{{ .Values.proxy.ports.http }}{{ end }}
           initialDelaySeconds: {{ .Values.proxy.probe.readiness.initialDelaySeconds }}
           periodSeconds: {{ .Values.proxy.probe.readiness.periodSeconds }}
           timeoutSeconds: {{ .Values.proxy.probe.readiness.timeoutSeconds }}
@@ -167,7 +171,7 @@ spec:
         startupProbe:
           httpGet:
             path: /status.html
-            port: {{ .Values.proxy.ports.http }}
+            port: {{ if .Values.proxy.probe.startup.port }}{{ .Values.proxy.probe.startup.port }}{{ else }}{{ .Values.proxy.ports.http }}{{ end }}
           initialDelaySeconds: {{ .Values.proxy.probe.startup.initialDelaySeconds }}
           periodSeconds: {{ .Values.proxy.probe.startup.periodSeconds }}
           timeoutSeconds: {{ .Values.proxy.probe.startup.timeoutSeconds }}
@@ -200,9 +204,19 @@ spec:
         - name: "sts-{{ .Values.tlsPrefix }}pulsarssl"
           containerPort: {{ .Values.proxy.ports.pulsarssl }}
         {{- end }}
-      {{- if and .Values.rbac.enabled .Values.rbac.psp }}
+      {{- if or (and .Values.rbac.enabled .Values.rbac.psp) .Values.proxy.containerSecurityContext }}
         securityContext:
+          {{- if and .Values.rbac.enabled .Values.rbac.psp }}
           readOnlyRootFilesystem: false
+          {{- end }}
+          {{- if and .Values.proxy.containerSecurityContext }}
+          {{- if .Values.proxy.containerSecurityContext.allowPrivilegeEscalation }}
+          allowPrivilegeEscalation: {{ .Values.proxy.containerSecurityContext.allowPrivilegeEscalation }}
+          {{- end }}
+          {{- if .Values.proxy.containerSecurityContext.runAsUser }}
+          runAsUser: {{ .Values.proxy.containerSecurityContext.runAsUser }}
+          {{- end }}
+          {{- end }}
       {{- end }}
 {{- if .Values.proxy.extreEnvs }}
         env:
