@@ -46,6 +46,10 @@ spec:
       {{ toYaml . | indent 8 }}
       {{- end }}
     spec:
+      {{- if .Values.pulsar_manager.init.securityContext }}
+      securityContext:
+      {{ toYaml .Values.pulsar_manager.init.securityContext | indent 8 }}
+      {{- end }}
       nodeSelector:
       {{- if .Values.pulsar_metadata.nodeSelector }}
       {{ toYaml .Values.pulsar_metadata.nodeSelector | indent 8 }}
