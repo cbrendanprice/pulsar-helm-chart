@@ -151,12 +151,12 @@ spec:
             - name: USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_USERNAME
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_PASSWORD
 {{- end }}
 {{- end }}

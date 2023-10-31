@@ -288,8 +288,8 @@ zookeeper:
     interval: 10s
     scrapeTimeout: 10s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -438,8 +438,8 @@ bookkeeper:
     interval: 10s
     scrapeTimeout: 10s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -644,8 +644,8 @@ autorecovery:
     interval: 10s
     scrapeTimeout: 10s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -740,8 +740,8 @@ broker:
     interval: 10s
     scrapeTimeout: 10s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   ports:
@@ -972,8 +972,8 @@ proxy:
     interval: 10s
     scrapeTimeout: 10s
     metricRelabelings:
-      # - action: labeldrop
-      #   regex: cluster
+#    - action: labeldrop
+#      regex: cluster
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   # nodeSelector:
@@ -985,18 +985,21 @@ proxy:
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     readiness:
       enabled: true
       failureThreshold: 10
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     startup:
       enabled: false
       failureThreshold: 30
       initialDelaySeconds: 60
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
   affinity:
     anti_affinity: true
     anti_affinity_topology_key: kubernetes.io/hostname
@@ -1101,6 +1104,14 @@ proxy:
   pdb:
     usePolicy: true
     maxUnavailable: 1
+
+  ## supports the following properties:
+  ## - `allowPrivilegeEscalation`
+  ## - `runAsUser`
+  containerSecurityContext: {}
+
+  ## full spec supported
+  podSecurityContext: {}
 
 ## Pulsar ToolSet
 ## templates/toolset-deployment.yaml
@@ -1314,6 +1325,7 @@ pulsar_manager:
   ## if either are missing the default value of "pulsar" is used for the username or a random password is generated
   ## And decode any key by using:
   ## kubectl get secret -l component=pulsar-manager -o=jsonpath="{.items[0].data.UI_PASSWORD}" | base64 --decode
+  existingSecretName:
   admin:
     ui_username: "pulsar"
     ui_password: ""  # leave empty for random password
@@ -1325,6 +1337,8 @@ pulsar_manager:
 # pulsar-helm-chart/charts/pulsar/templates/bookkeeper-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-manager-cluster-initialize.yaml
 job:
+  annotations: {}
+  labels: {}
   ttl:
     enabled: false
     secondsAfterFinished: 3600
