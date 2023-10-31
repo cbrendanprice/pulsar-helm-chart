@@ -34,6 +34,19 @@ spec:
   ttlSecondsAfterFinished: {{ .Values.job.ttl.secondsAfterFinished | default 600 }}
 {{- end }}
   template:
+    metadata:
+      {{- if .Values.job.annotations }}
+      annotations:
+{{ toYaml .Values.job.annotations | indent 8 }}
+      {{- else }}
+      annotations: {}
+      {{- end }}
+      {{- if .Values.job.labels }}
+      labels:
+{{ toYaml .Values.job.labels | indent 8 }}
+      {{- else }}
+      labels: {}
+      {{- end }}
     spec:
     {{- include "pulsar.imagePullSecrets" . | nindent 6 }}
     {{- if .Values.pulsar_metadata.nodeSelector }}
