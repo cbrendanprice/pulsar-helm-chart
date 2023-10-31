@@ -941,6 +941,9 @@ proxy:
     usePolicy: true
     maxUnavailable: 1
 
+  securityContext:
+    runAsUser:
+
 ## Pulsar Extra: Dashboard
 ## templates/dashboard-deployment.yaml
 ## Deprecated
@@ -1105,6 +1108,8 @@ pulsar_manager:
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/bookkeeper-cluster-initialize.yaml
 job:
+  annotations: {}
+  labels: {}
   ttl:
     enabled: false
     secondsAfterFinished: 3600

@@ -200,9 +200,14 @@ spec:
         - name: "sts-{{ .Values.tlsPrefix }}pulsarssl"
           containerPort: {{ .Values.proxy.ports.pulsarssl }}
         {{- end }}
-      {{- if and .Values.rbac.enabled .Values.rbac.psp }}
+      {{- if or (and .Values.rbac.enabled .Values.rbac.psp) .Values.proxy.securityContext }}
         securityContext:
+          {{- if and .Values.rbac.enabled .Values.rbac.psp }}
           readOnlyRootFilesystem: false
+          {{- end }}
+          {{- if and .Values.proxy.securityContext .Values.proxy.securityContext.runAsUser }}
+          runAsUser: {{ .Values.proxy.securityContext.runAsUser }}
+          {{- end }}
       {{- end }}
 {{- if .Values.proxy.extreEnvs }}
         env:
