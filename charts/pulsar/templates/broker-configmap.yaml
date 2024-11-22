@@ -28,7 +28,6 @@ metadata:
     component: {{ .Values.broker.component }}
 data:
   # Metadata settings
-  {{- if .Values.components.zookeeper }}
   zookeeperServers: "{{ template "pulsar.zookeeper.connect" . }}{{ .Values.metadataPrefix }}"
   {{- if .Values.pulsar_metadata.configurationStore }}
   configurationStoreServers: "{{ template "pulsar.configurationStore.connect" . }}{{ .Values.pulsar_metadata.configurationStoreMetadataPrefix }}"
@@ -36,19 +35,13 @@ data:
   {{- if not .Values.pulsar_metadata.configurationStore }}
   configurationStoreServers: "{{ template "pulsar.zookeeper.connect" . }}{{ .Values.metadataPrefix }}"
   {{- end }}
-  {{- end }}
-  {{- if .Values.components.oxia }}
-  metadataStoreUrl: "{{ template "pulsar.oxia.metadata.url.broker" . }}"
-  configurationMetadataStoreUrl: "{{ template "pulsar.oxia.metadata.url.broker" . }}"
-  bookkeeperMetadataServiceUri: "{{ template "pulsar.oxia.metadata.url.bookkeeper" . }}"
-  {{- end }}
 
   # Broker settings
   clusterName: {{ template "pulsar.cluster.name" . }}
   exposeTopicLevelMetricsInPrometheus: "true"
   numHttpServerThreads: "8"
   zooKeeperSessionTimeoutMillis: "30000"
-  statusFilePath: "{{ template "pulsar.home" . }}/logs/status"
+  statusFilePath: "{{ template "pulsar.home" . }}/status"
 
   # Tiered storage settings
   {{- if .Values.broker.storageOffload.driver }}
@@ -121,7 +114,6 @@ data:
   PF_functionRuntimeFactoryConfigs_pulsarRootDir: {{ template "pulsar.home" . }}
   PF_kubernetesContainerFactory_pulsarRootDir: {{ template "pulsar.home" . }}
   PF_functionRuntimeFactoryConfigs_pulsarDockerImageName: "{{ template "pulsar.imageFullName" (dict "image" .Values.images.functions "root" .) }}"
-  PF_functionRuntimeFactoryConfigs_imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.images.functions "root" .) }}"
   PF_functionRuntimeFactoryConfigs_submittingInsidePod: "true"
   PF_functionRuntimeFactoryConfigs_installUserCodeDependencies: "true"
   PF_functionRuntimeFactoryConfigs_jobNamespace: {{ template "pulsar.namespace" . }}
@@ -135,7 +127,6 @@ data:
   {{- end }}
   # support version < 2.5.0
   PF_kubernetesContainerFactory_pulsarDockerImageName: "{{ template "pulsar.imageFullName" (dict "image" .Values.images.functions "root" .) }}"
-  PF_kubernetesContainerFactory_imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.images.functions "root" .) }}"
   PF_kubernetesContainerFactory_submittingInsidePod: "true"
   PF_kubernetesContainerFactory_installUserCodeDependencies: "true"
   PF_kubernetesContainerFactory_jobNamespace: {{ template "pulsar.namespace" . }}

@@ -17,7 +17,7 @@
 # under the License.
 #
 
-{{- if or (and .Values.useReleaseStatus .Release.IsInstall) .Values.initialize }}
+{{- if or .Release.IsInstall .Values.initialize }}
 {{- if .Values.components.pulsar_manager }}
 {{- $preValidateUsingInitContainers := (or (eq .Values.pulsar_manager.init.enableIstioCompatability nil) (not .Values.pulsar_manager.init.enableIstioCompatability)) }}
 apiVersion: batch/v1
@@ -29,7 +29,7 @@ metadata:
     {{- include "pulsar.standardLabels" . | nindent 4 }}
     component: {{ .Values.pulsar_manager.component }}-init
 spec:
-  {{- if and .Values.job.ttl.enabled (semverCompare ">=1.23-0" .Capabilities.KubeVersion.Version) }}
+  {{- if or .Values.job.ttl.enabled (semverCompare ">=1.23-0" .Capabilities.KubeVersion.Version) }}
   ttlSecondsAfterFinished: {{ .Values.job.ttl.secondsAfterFinished | default 600 }}
   {{- end }}
   template:
@@ -47,7 +47,6 @@ spec:
       {{ toYaml . | indent 8 }}
       {{- end }}
     spec:
-      {{- include "pulsar.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.pulsar_manager.init.securityContext }}
       securityContext:
       {{ toYaml .Values.pulsar_manager.init.securityContext | indent 8 }}
@@ -65,7 +64,7 @@ spec:
       initContainers:
         - name: wait-pulsar-manager-ready
           image: "{{ template "pulsar.imageFullName" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
-          imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
+          imagePullPolicy: {{ .Values.pulsar_metadata.image.pullPolicy }}
           resources: {{ toYaml .Values.initContainer.resources | nindent 12 }}
           command: [ "sh", "-c" ]
           args:
@@ -76,10 +75,9 @@ spec:
               done;
         # This init container will wait for at least one broker to be ready before
         # initializing the pulsar-manager
-        {{- if .Values.components.broker }}
         - name: wait-broker-ready
           image: "{{ template "pulsar.imageFullName" (dict "image" .Values.images.proxy "root" .) }}"
-          imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
+          imagePullPolicy: {{ .Values.images.proxy.pullPolicy }}
           resources: {{ toYaml .Values.initContainer.resources | nindent 12 }}
           command: [ "sh", "-c" ]
           args:
@@ -91,19 +89,17 @@ spec:
                 sleep 10;
                 brokerServiceNumber="$(nslookup -timeout=10 {{ template "pulsar.fullname" . }}-{{ .Values.broker.component }} | grep Name | wc -l)";
               done;
-        {{- end }}
       {{- end }}
       containers:
         - name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-init"
           image: "{{ template "pulsar.imageFullName" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
-          imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.pulsar_metadata.image "root" .) }}"
+          imagePullPolicy: {{ .Values.pulsar_metadata.image.pullPolicy }}
           {{- if .Values.pulsar_metadata.resources }}
           resources: {{ toYaml .Values.pulsar_metadata.resources | nindent 12 }}
           {{- end }}
           command: [ "sh", "-c" ]
           args:
             - |
-              cd /tmp
               ADMIN_URL={{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-admin:{{ .Values.pulsar_manager.adminService.port }}
 
               {{- if not $preValidateUsingInitContainers }}
@@ -157,7 +153,6 @@ spec:
                 echo "$LOGIN_REPLY"
               fi
 
-              {{- if .Values.components.broker }}
               LOGIN_TOKEN=$(grep "token:" headers.txt | sed 's/^.*: //')
               LOGIN_JSESSSIONID=$(grep -o "JSESSIONID=[a-zA-Z0-9_]*" headers.txt | sed 's/^.*=//')
 
@@ -193,33 +188,16 @@ spec:
                 echo "Error creating environment"
                 exit 1
               fi
-              {{- else }}
-              if [ -n "$(echo "$LOGIN_REPLY" | grep 'success')" ]; then
-                echo "Successfully created / found existing account"
-                exit 0
-              else
-                echo "Error creating account"
-                exit 1
-              fi
-              {{- end }}
           env:
             - name: USERNAME
               valueFrom:
                 secretKeyRef:
-                  {{- if .Values.pulsar_manager.admin.existingSecret }}
-                  name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
-                  {{- else }}
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
-                  {{- end }}
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_USERNAME
             - name: PASSWORD
               valueFrom:
                 secretKeyRef:
-                  {{- if .Values.pulsar_manager.admin.existingSecret }}
-                  name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
-                  {{- else }}
-                  name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
-                  {{- end }}
+                  name: {{ if .Values.pulsar_manager.existingSecretName}}{{ .Values.pulsar_manager.existingSecretName | trim | quote }}{{else}}"{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"{{end}}
                   key: UI_PASSWORD
 {{- end }}
 {{- end }}
