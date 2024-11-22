@@ -1079,18 +1079,21 @@ proxy:
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     readiness:
       enabled: true
       failureThreshold: 10
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
     startup:
       enabled: false
       failureThreshold: 30
       initialDelaySeconds: 60
       periodSeconds: 10
       timeoutSeconds: 5
+      port:
   affinity:
     anti_affinity: true
     anti_affinity_topology_key: kubernetes.io/hostname
@@ -1208,6 +1211,14 @@ proxy:
   pdb:
     usePolicy: true
     maxUnavailable: 1
+
+  ## supports the following properties:
+  ## - `allowPrivilegeEscalation`
+  ## - `runAsUser`
+  containerSecurityContext: {}
+
+  ## full spec supported
+  podSecurityContext: {}
 
 ## Pulsar ToolSet
 ## templates/toolset-statefulset.yaml
@@ -1445,11 +1456,19 @@ pulsar_manager:
     db_username: "pulsar"
     db_password: ""  # leave empty for random password
 
+  existingSecretDatabase:
+    name: ""
+    jdbcUrlKey: ""  # if provided assumes username and password are included
+    usernameKey: ""
+    passwordKey: ""
+
 # These are jobs where job ttl configuration is used
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/bookkeeper-cluster-initialize.yaml
 # pulsar-helm-chart/charts/pulsar/templates/pulsar-manager-cluster-initialize.yaml
 job:
+  annotations: {}
+  labels: {}
   ttl:
     enabled: false
     secondsAfterFinished: 3600
