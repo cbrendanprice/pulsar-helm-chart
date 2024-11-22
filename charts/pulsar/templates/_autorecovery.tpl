@@ -91,6 +91,7 @@ Define autorecovery tls certs volumes
 Define autorecovery init container : verify cluster id
 */}}
 {{- define "pulsar.autorecovery.init.verify_cluster_id" -}}
+bash -c "[ \${skipVerification:-0} != '0' ] && exit 0";
 bin/apply-config-from-env.py conf/bookkeeper.conf;
 export BOOKIE_MEM="-Xmx128M";
 {{- include "pulsar.autorecovery.zookeeper.tls.settings" . -}}
