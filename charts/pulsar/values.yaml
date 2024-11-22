@@ -36,8 +36,7 @@ clusterDomain: cluster.local
 
 ## Set to true on install
 initialize: false
-## Set useReleaseStatus to false if you're deploying this chart using a system that doesn't track .Release.IsInstall or .Release.IsUpgrade (like argocd)
-useReleaseStatus: true
+
 ## Set cluster name
 # clusterName:
 
@@ -113,8 +112,6 @@ affinity:
 components:
   # zookeeper
   zookeeper: true
-  # oxia
-  oxia: false
   # bookkeeper
   bookkeeper: true
   # bookkeeper - autorecovery
@@ -122,9 +119,7 @@ components:
   # broker
   broker: true
   # functions
-  # WARNING! Before enabling functions, make sure that all of your users are trusted since functions run user code
-  # and the current security sandbox is not sufficient to protect against malicious code.
-  functions: false
+  functions: true
   # proxy
   proxy: true
   # toolset
@@ -132,15 +127,9 @@ components:
   # pulsar manager
   pulsar_manager: false
 
-# default image repository for pulsar images
-defaultPulsarImageRepository: apachepulsar/pulsar-all
-
 # default image tag for pulsar images
 # uses chart's appVersion when unspecified
 defaultPulsarImageTag:
-
-# default pull policy for all images
-defaultPullPolicy: IfNotPresent
 
 ## Images
 ##
@@ -150,64 +139,39 @@ images:
   # imagePullSecrets:
   #   - secretName
   zookeeper:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
   bookie:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
   autorecovery:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
   broker:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
-  toolset:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
-    # uses defaultPulsarImageTag when unspecified
-    tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
   proxy:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
   functions:
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
   pulsar_manager:
     repository: apachepulsar/pulsar-manager
     tag: v0.4.0
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
+    pullPolicy: IfNotPresent
     hasCommand: false
-  oxia:
-    repository: streamnative/oxia
-    tag: 0.11.9
-    pullPolicy: Always
 
 ## TLS
 ## templates/tls-certs.yaml
@@ -232,7 +196,6 @@ tls:
   proxy:
     enabled: false
     cert_name: tls-proxy
-    createCert: true  # set to false if you want to use an existing certificate
   # settings for generating certs for broker
   broker:
     enabled: false
@@ -254,8 +217,6 @@ tls:
   # TLS setting for function runtime instance
   function_instance:
     # controls the use of TLS for function runtime connections towards brokers
-    enabled: false
-  oxia:
     enabled: false
 
 # Enable or disable broker authentication and authorization.
@@ -321,12 +282,11 @@ zookeeper:
   updateStrategy:
     type: RollingUpdate
   podManagementPolicy: Parallel
-  initContainers: []
   # This is how prometheus discovers this component
   podMonitor:
     enabled: true
-    interval: 60s
-    scrapeTimeout: 60s
+    interval: 10s
+    scrapeTimeout: 10s
     metricRelabelings:
 #    - action: labeldrop
 #      regex: cluster
@@ -338,7 +298,6 @@ zookeeper:
     clientTls: 2281
     follower: 2888
     leaderElection: 3888
-    # admin: 9990
   # nodeSelector:
     # cloud.google.com/gke-nodepool: default-pool
   probe:
@@ -367,8 +326,6 @@ zookeeper:
     # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
     # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
     type: requiredDuringSchedulingIgnoredDuringExecution
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
@@ -394,32 +351,10 @@ zookeeper:
     fsGroup: 0
     fsGroupChangePolicy: "OnRootMismatch"
   volumes:
-    useSeparateDiskForTxlog: false
     # use a persistent volume or emptyDir
     persistence: true
     data:
       name: data
-      size: 20Gi
-      local_storage: true
-      ## If you already have an existent storage class and want to reuse it, you can specify its name with the option below
-      ##
-      # storageClassName: existent-storage-class
-      #
-      ## Instead if you want to create a new storage class define it below
-      ## If left undefined no storage class will be defined along with PVC
-      ##
-      # storageClass:
-        # type: pd-ssd
-        # fsType: xfs
-        # provisioner: kubernetes.io/gce-pd
-      ## If you want to bind static persistent volumes via selectors, e.g.:
-      # selector:
-        # matchLabels:
-        # app: pulsar-zookeeper
-      selector: {}
-    ## If you set useSeparateDiskForTxlog to true, this section configures the extra volume for the zookeeper transaction log.
-    datalog:
-      name: datalog
       size: 20Gi
       local_storage: true
       ## If you already have an existent storage class and want to reuse it, you can specify its name with the option below
@@ -476,81 +411,7 @@ zookeeper:
     usePolicy: true
     maxUnavailable: 1
 
-## Pulsar: Oxia cluster
-oxia:
-  component: oxia
-  initialShardCount: 3
-  replicationFactor: 3
-## templates/coordinator-deployment.yaml
-  coordinator:
-    # This is how prometheus discovers this component
-    podMonitor:
-      enabled: true
-      interval: 60s
-      scrapeTimeout: 60s
-      metricRelabelings:
-        # - action: labeldrop
-        #   regex: cluster
-    cpuLimit: 100m
-    memoryLimit: 128Mi
-    ports:
-      internal: 6649
-      metrics: 8080
-    service:
-      annotations: {}
-    service_account:
-      annotations: {}
-    tolerations: []
-    # nodeSelector:
-      # cloud.google.com/gke-nodepool: default-pool
-## templates/server-statefulset.yaml
-  server:
-    # This is how prometheus discovers this component
-    podMonitor:
-      enabled: true
-      interval: 60s
-      scrapeTimeout: 60s
-      metricRelabelings:
-        # - action: labeldrop
-        #   regex: cluster
-    replicas: 3
-    # CPU limit for the server pod
-    cpuLimit: 1
-    # Memory limit for the server pod
-    memoryLimit: 1Gi
-    # Oxia database cache size in MB
-    dbCacheSizeMb: 512
-    # Storage size for the PVC of the server pod
-    storageSize: 8Gi
-    # Storage class name for the PVC of the server pod
-    # storageClassName: existent-storage-class
-    ports:
-      public: 6648
-      internal: 6649
-      metrics: 8080
-    service:
-      public:
-        annotations: {}
-      internal:
-        annotations: {}
-    service_account:
-      annotations: {}
-    securityContext:
-      fsGroup: 0
-      fsGroupChangePolicy: "OnRootMismatch"
-    affinity:
-      anti_affinity: true
-      anti_affinity_topology_key: kubernetes.io/hostname
-      # Set the anti affinity type. Valid values:
-      # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
-      # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
-      type: requiredDuringSchedulingIgnoredDuringExecution
-    # set topologySpreadConstraint to deploy pods across different zones
-    topologySpreadConstraints: []
-    tolerations: []
-    # nodeSelector:
-      # cloud.google.com/gke-nodepool: default-pool
-  pprofEnabled: false
+
 ## Pulsar: Bookkeeper cluster
 ## templates/bookkeeper-statefulset.yaml
 ##
@@ -561,12 +422,6 @@ bookkeeper:
   ## BookKeeper Cluster Initialize
   ## templates/bookkeeper-cluster-initialize.yaml
   metadata:
-    ## Timeout for waiting for zookeeper to become available before running metadata initialization
-    waitZookeeperTimeout: 600
-    ## Timeout for running metadata initialization
-    initTimeout: 60
-    ## Timeout for waiting for oxia to be available before running metadata initialization. This setting applies only when oxia is enabled.
-    waitOxiaTimeout: 600
     ## Set the resources used for running `bin/bookkeeper shell initnewcluster`
     ##
     resources:
@@ -577,12 +432,11 @@ bookkeeper:
   updateStrategy:
     type: RollingUpdate
   podManagementPolicy: Parallel
-  initContainers: []
   # This is how prometheus discovers this component
   podMonitor:
     enabled: true
-    interval: 60s
-    scrapeTimeout: 60s
+    interval: 10s
+    scrapeTimeout: 10s
     metricRelabelings:
 #    - action: labeldrop
 #      regex: cluster
@@ -620,13 +474,9 @@ bookkeeper:
     # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
     # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
     type: requiredDuringSchedulingIgnoredDuringExecution
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
-  ## Timeout for waiting for bookkeeper cluster metadata to be initialized before starting a bookie
-  waitMetadataTimeout: 600
   resources:
     requests:
       memory: 512Mi
@@ -788,12 +638,11 @@ autorecovery:
   # so the metrics are correctly rendered in grafana dashboard
   component: recovery
   replicaCount: 1
-  initContainers: []
   # This is how prometheus discovers this component
   podMonitor:
     enabled: true
-    interval: 60s
-    scrapeTimeout: 60s
+    interval: 10s
+    scrapeTimeout: 10s
     metricRelabelings:
 #    - action: labeldrop
 #      regex: cluster
@@ -810,13 +659,9 @@ autorecovery:
     # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
     # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
     type: requiredDuringSchedulingIgnoredDuringExecution
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   # tolerations: []
   gracePeriod: 30
-  ## Timeout for waiting for bookkeeper to become available before starting a broker
-  waitBookkeeperTimeout: 120
   resources:
     requests:
       memory: 64Mi
@@ -843,26 +688,14 @@ pulsar_metadata:
   component: pulsar-init
   image:
     # the image used for running `pulsar-cluster-initialize` job
-    # uses defaultPulsarImageRepository when unspecified
-    repository:
+    repository: apachepulsar/pulsar-all
     # uses defaultPulsarImageTag when unspecified
     tag:
-    # uses defaultPullPolicy when unspecified
-    pullPolicy:
-  ## set an existing configuration store. This setting applies only when zookeeper is enabled.
+    pullPolicy: IfNotPresent
+  ## set an existing configuration store
   # configurationStore:
-  # the prefix for the configuration store metadata. This setting applies only when zookeeper is enabled.
   configurationStoreMetadataPrefix: ""
-  # the configuration store port. This setting applies only when zookeeper is enabled.
   configurationStorePort: 2181
-  # the zookeeper timeout. This setting applies only when zookeeper is enabled.
-  waitZookeeperTimeout: 600
-  ## Timeout for waiting for oxia to be available before running metadata initialization. This setting applies only when oxia is enabled.
-  waitOxiaTimeout: 600
-  ## Timeout for waiting for bookkeeper to be initialized before running metadata initialization
-  waitBookkeeperTimeout: 120
-  ## Timeout for running metadata initialization
-  initTimeout: 60
 
   # resources for bin/pulsar initialize-cluster-metadata
   resources:
@@ -901,14 +734,11 @@ broker:
     maxReplicas: 3
     metrics: ~
     behavior: ~
-  # The podManagementPolicy cannot be modified for an existing deployment. If you need to change this value, you will need to manually delete the existing broker StatefulSet and then redeploy the chart.
-  podManagementPolicy:
-  initContainers: []
   # This is how prometheus discovers this component
   podMonitor:
     enabled: true
-    interval: 60s
-    scrapeTimeout: 60s
+    interval: 10s
+    scrapeTimeout: 10s
     metricRelabelings:
 #    - action: labeldrop
 #      regex: cluster
@@ -947,17 +777,9 @@ broker:
     # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
     # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
     type: preferredDuringSchedulingIgnoredDuringExecution
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
-  ## Timeout for waiting for zookeeper to become available before starting a broker
-  waitZookeeperTimeout: 600
-  ## Timeout for waiting for oxia to be available before starting a broker. This setting applies only when oxia is enabled.
-  waitOxiaTimeout: 600
-  ## Timeout for waiting for bookkeeper to become available before starting a broker
-  waitBookkeeperTimeout: 120
   resources:
     requests:
       memory: 512Mi
@@ -975,12 +797,12 @@ broker:
   #     readOnly: true
   extraVolumes: []
   extraVolumeMounts: []
-  extraEnvs: []
-  #  - name: POD_NAME
-  #    valueFrom:
-  #      fieldRef:
-  #        apiVersion: v1
-  #        fieldPath: metadata.name
+  extreEnvs: []
+#    - name: POD_NAME
+#      valueFrom:
+#        fieldRef:
+#          apiVersion: v1
+#          fieldPath: metadata.name
   ## Broker configmap
   ## templates/broker-configmap.yaml
   ## Keys in broker.conf can be overridden here. Use PULSAR_PREFIX_ to add keys to broker.conf.
@@ -1014,12 +836,6 @@ broker:
   ## templates/broker-service.yaml
   ##
   service:
-    # clusterIP can be one of the three, which determines the type of k8s service deployed for broker
-    # 1. a valid IPv4 address -> non-headless service, let you select the IPv4 address
-    # 2. '' -> non-headless service, k8s picks an IPv4 address
-    # 3. 'None' -> headless
-    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
-    clusterIP: "None"
     annotations: {}
   ## Broker PodDisruptionBudget
   ## templates/broker-pdb.yaml
@@ -1150,12 +966,11 @@ proxy:
     maxReplicas: 3
     metrics: ~
     behavior: ~
-  initContainers: []
   # This is how prometheus discovers this component
   podMonitor:
     enabled: true
-    interval: 60s
-    scrapeTimeout: 60s
+    interval: 10s
+    scrapeTimeout: 10s
     metricRelabelings:
 #    - action: labeldrop
 #      regex: cluster
@@ -1192,17 +1007,9 @@ proxy:
     # requiredDuringSchedulingIgnoredDuringExecution - rules must be met for pod to be scheduled (hard) requires at least one node per replica
     # preferredDuringSchedulingIgnoredDuringExecution - scheduler will try to enforce but not guranentee
     type: requiredDuringSchedulingIgnoredDuringExecution
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
-  ## Timeout for waiting for zookeeper to become available before starting a proxy
-  waitZookeeperTimeout: 600
-  ## Timeout for waiting for oxia to be available before starting a proxy. This setting applies only when oxia is enabled.
-  waitOxiaTimeout: 600
-  ## Timeout for waiting for brokers to become available before starting a proxy
-  waitBrokerTimeout: 120
   resources:
     requests:
       memory: 128Mi
@@ -1220,7 +1027,7 @@ proxy:
   #     readOnly: true
   extraVolumes: []
   extraVolumeMounts: []
-  extraEnvs: []
+  extreEnvs: []
 #    - name: POD_IP
 #      valueFrom:
 #        fieldRef:
@@ -1276,15 +1083,6 @@ proxy:
     ## Restrict traffic through the load balancer to specified IPs on providers supporting it.
     # loadBalancerSourceRanges:
     #   - 10.0.0.0/8
-    # Set a loadBalancerClass for loadbalancer service. (example: loadBalancerClass is needed by metallb)
-    # loadBalancerClass: ""
-    # Optional. When setting proxy.service.type is set to NodePort, nodePorts allows to choose the port that will be open on each node to proxy requests to each destination proxy service.
-    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
-    nodePorts:
-      http: ""
-      https: ""
-      pulsar: ""
-      pulsarssl: ""
   ## Proxy ingress
   ## templates/proxy-ingress.yaml
   ##
@@ -1316,19 +1114,16 @@ proxy:
   podSecurityContext: {}
 
 ## Pulsar ToolSet
-## templates/toolset-statefulset.yaml
+## templates/toolset-deployment.yaml
 ##
 toolset:
   component: toolset
   useProxy: true
   replicaCount: 1
-  initContainers: []
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   # nodeSelector:
     # cloud.google.com/gke-nodepool: default-pool
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
@@ -1447,8 +1242,6 @@ kube-prometheus-stack:
           datasource: Prometheus
   prometheus-node-exporter:
     enabled: true
-    hostRootFsMount:
-      enabled: false
   alertmanager:
     enabled: false
 
@@ -1458,13 +1251,10 @@ kube-prometheus-stack:
 pulsar_manager:
   component: pulsar-manager
   replicaCount: 1
-  initContainers: []
   # True includes annotation for statefulset that contains hash of corresponding configmap, which will cause pods to restart on configmap change
   restartPodsOnConfigMapChange: false
   # nodeSelector:
   # cloud.google.com/gke-nodepool: default-pool
-  # set topologySpreadConstraint to deploy pods across different zones
-  topologySpreadConstraints: []
   annotations: {}
   tolerations: []
   gracePeriod: 30
@@ -1472,20 +1262,22 @@ pulsar_manager:
     requests:
       memory: 250Mi
       cpu: 0.1
+
   configData:
     REDIRECT_HOST: "http://127.0.0.1"
     REDIRECT_PORT: "9527"
-    LOG_LEVEL: "INFO"
-    # DB
-    URL: "jdbc:postgresql://127.0.0.1:5432/pulsar_manager"
-    DRIVER_CLASS_NAME: "org.postgresql.Driver"
-    # enables the "message peeking" feature
-    PULSAR_PEEK_MESSAGE: "true"
+    DRIVER_CLASS_NAME: org.postgresql.Driver
+    URL: jdbc:postgresql://127.0.0.1:5432/pulsar_manager
+    LOG_LEVEL: DEBUG
+    SPRING_CONFIGURATION_FILE: "/pulsar-manager/pulsar-manager/application.properties"
+    PULSAR_MANAGER_OPTS: " -Dlog4j2.formatMsgNoLookups=true"
+
   extraEnvVarsSecret:
   # evaluated as a template
   extraVolumeMounts: []
   # evaluated as a template
   extraVolumes: []
+
   volumes:
     # use a persistent volume or emptyDir
     persistence: true
@@ -1501,6 +1293,7 @@ pulsar_manager:
         # matchLabels:
         # app: pulsar-bookkeeper-journal
       selector: {}
+
   ## Pulsar manager service
   ## templates/pulsar-manager-service.yaml
   ##
@@ -1515,13 +1308,12 @@ pulsar_manager:
     ## Restrict traffic through the load balancer to specified IPs on providers supporting it.
     # loadBalancerSourceRanges:
     #   - 10.0.0.0/8
-    # Set a loadBalancerClass for loadbalancer service. (example: loadBalancerClass is needed by metallb)
-    # loadBalancerClass: ""
   adminService:
     type: ClusterIP
     port: 7750
     targetPort: 7750
     annotations: {}
+
   ## Pulsar manager ingress
   ## templates/pulsar-manager-ingress.yaml
   ##
@@ -1544,27 +1336,22 @@ pulsar_manager:
     labels: {}
     securityContext: {}
 
-  ## On first install, the helm chart tries to reuse an existing secret with matching name by default
-  ## if this should fail it uses the given username and password to create a new secret
-  ## if either are missing the default value of "pulsar" is used for the username or a random password is generated
-  ## And decode any key by using:
-  ## kubectl get secret -l component=pulsar-manager -o=jsonpath="{.items[0].data.UI_PASSWORD}" | base64 --decode
-  existingSecretName:
   existingSecretDatabase:
     name: ""
     usernameKey: ""
     passwordKey: ""
 
+  ## On first install, the helm chart tries to reuse an existing secret with matching name by default
+  ## if this should fail it uses the given username and password to create a new secret
+  ## if either are missing the default value of "pulsar" is used for the username or a random password is generated
+  ## And decode any key by using:
+  ## kubectl get secret -l component=pulsar-manager -o=jsonpath="{.items[0].data.UI_PASSWORD}" | base64 --decode
   admin:
-    ## Setting a value at existingSecret disables automatic creation of the secret for pulsar_manager admin credentials and instead uses an existing secret to initialize pulsar-manager
-    ## The existing secret should have the following keys:
-    ## DB_PASSWORD: <database password>
-    ## DB_USERNAME: <database username>
-    ## UI_PASSWORD: <UI password>
-    ## UI_USERNAME: <UI username>
-    existingSecret: ""
+    existingSecret:
+
     ui_username: "pulsar"
     ui_password: ""  # leave empty for random password
+
     db_username: "pulsar"
     db_password: ""  # leave empty for random password
 
