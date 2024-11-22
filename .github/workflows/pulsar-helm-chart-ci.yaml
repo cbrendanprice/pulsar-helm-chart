@@ -67,7 +67,7 @@ jobs:
     if: ${{ needs.preconditions.outputs.docs_only != 'true' }}
     steps:
       - name: Set up Go 1.12
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
           go-version: 1.12
         id: go
@@ -105,13 +105,13 @@ jobs:
 
       - name: Set up Helm
         if: ${{ steps.check_changes.outputs.docs_only != 'true' }}
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v3
         with:
-          version: v3.14.4
+          version: v3.12.3
 
       - name: Set up Python
         if: ${{ steps.check_changes.outputs.docs_only != 'true' }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -127,7 +127,7 @@ jobs:
             --validate-maintainers=false \
             --target-branch ${{ github.event.repository.default_branch }}
 
-      - name: Run kubeconform check for helm template with every major k8s version 1.23.0-1.30.0
+      - name: Run kubeconform check for helm template with every major k8s version 1.21.0-1.29.0
         if: ${{ steps.check_changes.outputs.docs_only != 'true' }}
         run: |
           PULSAR_CHART_HOME=$(pwd)
@@ -140,22 +140,15 @@ jobs:
           helm dependency build charts/pulsar
           validate_helm_template_with_k8s_version() {
             local kube_version=$1
-            shift
-            echo -n "Validating helm template with kubeconform for k8s version $kube_version"
-            if [ $# -gt 0 ]; then
-              echo " Extra args: $*"
-            else
-              echo ""
-            fi
-            helm template charts/pulsar --set kube-prometheus-stack.enabled=false --set components.pulsar_manager=true --kube-version $kube_version "$@" | \
+            echo "Validating helm template with kubeconform for k8s version $kube_version"
+            helm template charts/pulsar --set kube-prometheus-stack.enabled=false --set components.pulsar_manager=true --kube-version $kube_version | \
               kubeconform -schema-location default -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' -strict -kubernetes-version $kube_version -summary
           }
           set -o pipefail
-          for k8s_version_part in {23..30}; do
+          for k8s_version_part in {21..29}; do
             k8s_version="1.${k8s_version_part}.0"
+            echo "Validating helm template with kubeconform for k8s version $k8s_version"
             validate_helm_template_with_k8s_version $k8s_version
-            echo "Validating with Oxia enabled"
-            validate_helm_template_with_k8s_version $k8s_version --set components.zookeeper=false --set components.oxia=true
           done
       - name: Wait for ssh connection when build fails
         # ssh access is enabled for builds in own forks
@@ -174,20 +167,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # see https://github.com/kubernetes-sigs/kind/releases/tag/v0.22.0 for the list of supported k8s versions for kind 0.22.0
+        # see https://github.com/kubernetes-sigs/kind/releases/tag/v0.20.0 for the list of supported k8s versions for kind 0.20.0
         k8sVersion:
-          - version: "1.23.17"
-            kind_image_tag: v1.23.17@sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
-          - version: "1.29.2"
-            kind_image_tag: v1.29.2@sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245
+          - version: "1.21.14"
+            kind_image_tag: v1.21.14@sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
+          - version: "1.27.3"
+            kind_image_tag: v1.27.3@sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72
         testScenario:
           - name: Upgrade latest released version
             values_file: .ci/clusters/values-upgrade.yaml
             shortname: upgrade
             type: upgrade
-          - name: Use previous LTS Pulsar Image
-            values_file: .ci/clusters/values-pulsar-previous-lts.yaml
-            shortname: pulsar-previous-lts
+          - name: Use Pulsar Image
+            values_file: .ci/clusters/values-pulsar-image.yaml
+            shortname: pulsar-image
           - name: JWT Asymmetric Keys
             values_file: .ci/clusters/values-jwt-asymmetric.yaml
             shortname: jwt-asymmetric
@@ -215,48 +208,45 @@ jobs:
           - name: Pulsar Manager
             values_file: .ci/clusters/values-pulsar-manager.yaml
             shortname: pulsar-manager
-          - name: Oxia
-            values_file: .ci/clusters/values-oxia.yaml
-            shortname: oxia
         include:
           - k8sVersion:
-              version: "1.23.17"
-              kind_image_tag: v1.23.17@sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
+              version: "1.21.14"
+              kind_image_tag: v1.21.14@sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
             testScenario:
               name: "Upgrade TLS"
               values_file: .ci/clusters/values-tls.yaml
               shortname: tls
               type: upgrade
           - k8sVersion:
-              version: "1.23.17"
-              kind_image_tag: v1.23.17@sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
+              version: "1.21.14"
+              kind_image_tag: v1.21.14@sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
             testScenario:
               name: "Upgrade PSP"
               values_file: .ci/clusters/values-psp.yaml
               shortname: psp
               type: upgrade
           - k8sVersion:
-              version: "1.23.17"
-              kind_image_tag: v1.23.17@sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
+              version: "1.21.14"
+              kind_image_tag: v1.21.14@sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
             testScenario:
-              name: "Upgrade kube-prometheus-stack for previous LTS"
-              values_file: .ci/clusters/values-prometheus-grafana.yaml --values .ci/clusters/values-pulsar-previous-lts.yaml
+              name: "Upgrade kube-prometheus-stack"
+              values_file: .ci/clusters/values-prometheus-grafana.yaml
               shortname: prometheus-grafana
               type: upgrade
               upgradeFromVersion: 3.2.0
           - k8sVersion:
-              version: "1.23.17"
-              kind_image_tag: v1.23.17@sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
+              version: "1.21.14"
+              kind_image_tag: v1.21.14@sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
             testScenario:
-              name: "TLS with helm 3.12.0"
+              name: "TLS with helm 3.10.0"
               values_file: .ci/clusters/values-tls.yaml
               shortname: tls
               type: install
-            helmVersion: 3.12.0
+            helmVersion: 3.10.0
     env:
       k8sVersion: ${{ matrix.k8sVersion.kind_image_tag }}
       KUBECTL_VERSION: ${{ matrix.k8sVersion.version }}
-      HELM_VERSION: ${{ matrix.helmVersion || '3.14.4' }}
+      HELM_VERSION: ${{ matrix.helmVersion || '3.12.3' }}
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -266,7 +256,38 @@ jobs:
 
       - name: Setup debugging tools for ssh access
         if: ${{ github.repository != 'apache/pulsar-helm-chart' && github.event_name == 'pull_request' }}
-        run: .ci/configure_ci_runner_for_debugging.sh
+        run: |
+          cat >> $HOME/.bashrc <<'EOF'
+          function use_kind_kubeconfig() {
+            export KUBECONFIG=$(ls $HOME/kind/pulsar-ci-*/kubeconfig.yaml)
+          }
+
+          function kubectl() {
+            # use kind environment's kubeconfig
+            if [ -z "$KUBECONFIG" ]; then
+              use_kind_kubeconfig
+            fi
+            command kubectl "$@"
+          }
+
+          function k9s() {
+            # use kind environment's kubeconfig
+            if [ -z "$KUBECONFIG" ]; then
+              use_kind_kubeconfig
+            fi
+            # install k9s on the fly
+            if [ ! -x /usr/local/bin/k9s ]; then
+              echo "Installing k9s..."
+              curl -L -s https://github.com/derailed/k9s/releases/download/v0.29.1/k9s_Linux_amd64.tar.gz | sudo tar xz -C /usr/local/bin k9s
+            fi
+            command k9s "$@"
+          }
+          EOF
+          cat >> $HOME/.bash_profile <<'EOF'
+          if [ -f ~/.bashrc ]; then
+            source ~/.bashrc
+          fi
+          EOF
 
       - name: Setup ssh access to build runner VM
         # ssh access is enabled for builds in own forks
@@ -302,7 +323,7 @@ jobs:
           ci::collect_k8s_logs
 
       - name: Upload k8s logs on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v2
         if: ${{ cancelled() || failure() }}
         continue-on-error: true
         with:
