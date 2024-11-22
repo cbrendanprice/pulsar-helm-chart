@@ -3,6 +3,29 @@ entries:
   pulsar:
   - apiVersion: v2
     appVersion: 4.0.0
+    created: "2024-11-22T02:08:39.745493544Z"
+    dependencies:
+    - condition: kube-prometheus-stack.enabled
+      name: kube-prometheus-stack
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 65.x.x
+    description: Apache Pulsar Helm chart for Kubernetes
+    digest: 0eca2b90673f1c05e6c8f9138b70e0b2f44807ec4083084d9a78cb59c2737fe4
+    home: https://pulsar.apache.org
+    icon: https://pulsar.apache.org/img/pulsar.svg
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: dev@pulsar.apache.org
+      name: The Apache Pulsar Team
+    name: pulsar
+    sources:
+    - https://github.com/apache/pulsar
+    - https://github.com/apache/pulsar-helm-chart
+    urls:
+    - https://github.com/cbrendanprice/pulsar-helm-chart/releases/download/pulsar-3.7.3/pulsar-3.7.3.tgz
+    version: 3.7.3
+  - apiVersion: v2
+    appVersion: 4.0.0
     created: "2024-11-22T02:00:50.89970852Z"
     dependencies:
     - condition: kube-prometheus-stack.enabled
@@ -433,4 +456,4 @@ entries:
     urls:
     - https://github.com/cbrendanprice/pulsar-helm-chart/releases/download/pulsar-3.0.0/pulsar-3.0.0.tgz
     version: 3.0.0
-generated: "2024-11-22T02:00:50.899829968Z"
+generated: "2024-11-22T02:08:39.74563506Z"
