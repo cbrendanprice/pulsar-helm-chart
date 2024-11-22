@@ -62,10 +62,6 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
     {{- end }}
-    {{- if .Values.autorecovery.topologySpreadConstraints }}
-      topologySpreadConstraints:
-        {{- toYaml .Values.autorecovery.topologySpreadConstraints | nindent 8 }}
-    {{- end }}
       affinity:
         {{- if and .Values.affinity.anti_affinity .Values.autorecovery.affinity.anti_affinity}}
         podAntiAffinity:
@@ -110,14 +106,13 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.autorecovery.gracePeriod }}
       serviceAccountName: "{{ template "pulsar.fullname" . }}-{{ .Values.autorecovery.component }}"
       initContainers:
-      {{- if and .Values.autorecovery.waitBookkeeperTimeout (gt (.Values.autorecovery.waitBookkeeperTimeout | int) 0) }}
       # This initContainer will wait for bookkeeper initnewcluster to complete
       # before deploying the bookies
       - name: pulsar-bookkeeper-verify-clusterid
         image: "{{ template "pulsar.imageFullName" (dict "image" .Values.images.autorecovery "root" .) }}"
-        imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.images.autorecovery "root" .) }}"
+        imagePullPolicy: {{ .Values.images.autorecovery.pullPolicy }}
         resources: {{ toYaml .Values.initContainer.resources | nindent 10 }}
-        command: ["timeout", "{{ .Values.autorecovery.waitBookkeeperTimeout }}", "sh", "-c"]
+        command: ["bash", "-c"]
         args:
         - >
           {{- include "pulsar.autorecovery.init.verify_cluster_id" . | nindent 10 }}
@@ -126,14 +121,10 @@ spec:
             name: "{{ template "pulsar.fullname" . }}-{{ .Values.autorecovery.component }}"
         volumeMounts:
         {{- include "pulsar.autorecovery.certs.volumeMounts" . | nindent 8 }}
-      {{- end }}
-      {{- if .Values.autorecovery.initContainers }}
-        {{- toYaml .Values.autorecovery.initContainers | nindent 6 }}
-      {{- end }}
       containers:
       - name: "{{ template "pulsar.fullname" . }}-{{ .Values.autorecovery.component }}"
         image: "{{ template "pulsar.imageFullName" (dict "image" .Values.images.autorecovery "root" .) }}"
-        imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.images.autorecovery "root" .) }}"
+        imagePullPolicy: {{ .Values.images.autorecovery.pullPolicy }}
       {{- if .Values.autorecovery.resources }}
         resources:
 {{ toYaml .Values.autorecovery.resources | indent 10 }}

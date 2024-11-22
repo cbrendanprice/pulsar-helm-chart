@@ -18,7 +18,6 @@
 #
 
 # deploy zookeeper PodMonitor only when `$.Values.zookeeper.podMonitor.enabled` is true
-{{- if .Values.components.zookeeper }}
 {{- if $.Values.zookeeper.podMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -56,5 +55,4 @@ spec:
     matchLabels:
       {{- include "pulsar.matchLabels" . | nindent 6 }}
       component: zookeeper
-{{- end }}
 {{- end }}
