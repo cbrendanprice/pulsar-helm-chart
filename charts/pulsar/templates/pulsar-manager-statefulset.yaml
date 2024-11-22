@@ -89,7 +89,23 @@ spec:
           envFrom:
           - configMapRef:
               name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}"
+          {{- if .Values.pulsar_manager.extraEnvVarsSecret }}
+          - secretRef:
+              name: {{ .Values.pulsar_manager.extraEnvVarsSecret | trim | quote }}
+          {{- end }}
           env:
+          {{- if and .Values.pulsar_manager.existingSecretDatabase .Values.pulsar_manager.existingSecretDatabase.name }}
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.passwordKey }}{{ .Values.pulsar_manager.existingSecretDatabase.passwordKey | trim | quote }}{{else}}DB_PASSWORD{{end}}
+          - name: USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.usernameKey }}{{ .Values.pulsar_manager.existingSecretDatabase.usernameKey | trim | quote }}{{else}}DB_USERNAME{{end}}
+          {{- else }}
           - name: USERNAME
             valueFrom:
               secretKeyRef:
@@ -106,8 +122,9 @@ spec:
                 name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
                 {{- else }}
                 name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                key: DB_USERNAME
                 {{- end }}
-                key: DB_PASSWORD
+          {{- end }}
         {{- if .Values.auth.authentication.enabled }}
         {{- if eq .Values.auth.authentication.provider "jwt" }}
         {{- if .Values.auth.superUsers.manager }}
@@ -118,7 +135,7 @@ spec:
                 name: "{{ .Release.Name }}-token-{{ .Values.auth.superUsers.manager }}"
         {{- end }}
         {{- end }}
-        {{- end }}          
+        {{- end }}
         {{- include "pulsar.imagePullSecrets" . | nindent 6}}
       volumes:
         {{- if .Values.pulsar_manager.extraVolumes }}
@@ -169,5 +186,4 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
 {{- end }}
-
 {{- end }}
