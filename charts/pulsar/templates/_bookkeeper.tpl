@@ -125,6 +125,7 @@ PULSAR_PREFIX_tlsTrustStore: /pulsar/certs/ca/ca.crt
 Define bookie init container : verify cluster id
 */}}
 {{- define "pulsar.bookkeeper.init.verify_cluster_id" -}}
+bash -c "[ \${skipVerification:-0} != '0' ] && exit 0"
 {{- if not (and .Values.volumes.persistence .Values.bookkeeper.volumes.persistence) }}
 bin/apply-config-from-env.py conf/bookkeeper.conf;
 export BOOKIE_MEM="-Xmx128M";
