@@ -67,6 +67,22 @@ spec:
         - name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}"
           image: "{{ .Values.images.pulsar_manager.repository }}:{{ .Values.images.pulsar_manager.tag }}"
           imagePullPolicy: "{{ template "pulsar.imagePullPolicy" (dict "image" .Values.images.pulsar_manager "root" .) }}"
+          # override the entrypoint because the pulsar manager command does not correctly utilize the jdbc url in the environment for external databases.
+          command:
+          - bash
+          - '-c'
+          args:
+            - >
+              [ -n "$URL" ] && ( \
+                cp "${SPRING_CONFIGURATION_FILE:-/pulsar-manager/pulsar-manager/application.properties}" /tmp/application.properties \
+                && sed -i '/^spring.datasource.url=/d' /tmp/application.properties \
+                && echo -e "\nspring.datasource.url=$URL" >> /tmp/application.properties \
+              ) && export SPRING_CONFIGURATION_FILE=/tmp/application.properties;
+              {{- if .Values.pulsar_manager.existingSecretDatabase.jdbcUrlKey }}
+              unset PASSWORD;
+              unset USERNAME;
+              {{- end }}
+              /pulsar-manager/entrypoint.sh;
         {{- if .Values.pulsar_manager.resources }}
           resources:
 {{ toYaml .Values.pulsar_manager.resources | indent 12 }}
@@ -89,7 +105,31 @@ spec:
           envFrom:
           - configMapRef:
               name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}"
+          {{- if .Values.pulsar_manager.extraEnvVarsSecret }}
+          - secretRef:
+              name: {{ .Values.pulsar_manager.extraEnvVarsSecret | trim | quote }}
+          {{- end }}
           env:
+          {{- if and .Values.pulsar_manager.existingSecretDatabase .Values.pulsar_manager.existingSecretDatabase.name (or .Values.pulsar_manager.existingSecretDatabase.jdbcUrlKey .Values.pulsar_manager.existingSecretDatabase.usernameKey .Values.pulsar_manager.existingSecretDatabase.passwordKey ) }}
+          {{- if .Values.pulsar_manager.existingSecretDatabase.jdbcUrlKey }}
+          - name: URL
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ .Values.pulsar_manager.existingSecretDatabase.jdbcUrlKey | trim | quote }}
+          {{- else }}
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.passwordKey }}{{ .Values.pulsar_manager.existingSecretDatabase.passwordKey | trim | quote }}{{else}}DB_PASSWORD{{end}}
+          - name: USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{.Values.pulsar_manager.existingSecretDatabase.name | trim | quote }}
+                key: {{ if .Values.pulsar_manager.existingSecretDatabase.usernameKey }}{{ .Values.pulsar_manager.existingSecretDatabase.usernameKey | trim | quote }}{{else}}DB_USERNAME{{end}}
+          {{- end }}
+          {{- else }}
           - name: USERNAME
             valueFrom:
               secretKeyRef:
@@ -106,8 +146,9 @@ spec:
                 name: {{ .Values.pulsar_manager.admin.existingSecret | quote }}
                 {{- else }}
                 name: "{{ template "pulsar.fullname" . }}-{{ .Values.pulsar_manager.component }}-secret"
+                key: DB_USERNAME
                 {{- end }}
-                key: DB_PASSWORD
+          {{- end }}
         {{- if .Values.auth.authentication.enabled }}
         {{- if eq .Values.auth.authentication.provider "jwt" }}
         {{- if .Values.auth.superUsers.manager }}
@@ -118,7 +159,7 @@ spec:
                 name: "{{ .Release.Name }}-token-{{ .Values.auth.superUsers.manager }}"
         {{- end }}
         {{- end }}
-        {{- end }}          
+        {{- end }}
         {{- include "pulsar.imagePullSecrets" . | nindent 6}}
       volumes:
         {{- if .Values.pulsar_manager.extraVolumes }}
@@ -169,5 +210,4 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
 {{- end }}
-
 {{- end }}
